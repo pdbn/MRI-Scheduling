@@ -107,7 +107,7 @@ library(dplyr)
 # Set seed for reproducibility
 set.seed(1234)
 
-# Parameters
+# Parameters (manually copied from first part)
 operating_hours <- 9 * 60  # Total minutes from 8:00 to 17:00
 type1_initial_slot <- 30   # Initial time slot for Type 1 patients in minutes
 type2_initial_slot <- 45   # Initial time slot for Type 2 patients in minutes
@@ -115,7 +115,7 @@ fixed_slot <- 40           # Fixed time slot for Policy 2
 type1_daily_rate <- 16.5   # Estimated daily arrival rate for Type 1 patients
 type2_daily_rate <- 10.4   # Estimated daily arrival rate for Type 2 patients
 
-# Arrival time distributions (Exponential based on daily rates)
+# Arrival time distributions (Poisson distribution)
 type1_arrival <- function() rexp(1, rate = type1_daily_rate / operating_hours)
 type2_arrival <- function() rexp(1, rate = type2_daily_rate / operating_hours)
 
@@ -300,7 +300,7 @@ plot_utilization_over_time(policy2_results$utilization)
 plot_waiting_times(policy2_waiting$waiting_times)
 
 ###---------------------------------------------------------------------------###
-# Define thresholds and limits for utilization adjustment
+# Adjusting timeslot length to improve utilization rate within given range
 # Define thresholds and limits for utilization adjustment
 utilization_min <- 0.8  # Minimum acceptable utilization rate (80%)
 utilization_max <- 0.95 # Maximum acceptable utilization rate (95%)
@@ -312,8 +312,6 @@ current_type2_slot <- type2_initial_slot
 current_fixed_slot <- fixed_slot
 
 # Initial check for both policies before starting the loop
-
-set.seed(1234)
 policy1_results <- simulate_policy1()
 policy1_performance <- evaluate_performance(policy1_results)
 policy1_meets_criteria <- all(
@@ -325,7 +323,6 @@ policy1_meets_criteria <- all(
     policy1_performance$utilization_facility_2 <= utilization_max
 )
 
-set.seed(1234)
 policy2_results <- simulate_policy2(current_fixed_slot)
 policy2_performance <- evaluate_performance(policy2_results)
 policy2_meets_criteria <- all(
