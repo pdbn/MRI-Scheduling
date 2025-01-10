@@ -97,6 +97,171 @@ bootstrap_results <- data.frame(
 # Print the results
 print(bootstrap_results)
 
+###---------------------------------------------------------------------------###
+# Monte Carlo Type 1 
+
+# Filter Type 1 data
+type1_data <- data %>% filter(PatientType == "Type 1")
+
+# Step 1: Extract daily counts and scan durations
+type1_daily_counts <- type1_data %>%
+  group_by(Date) %>%
+  summarise(DailyCount = n())
+
+type1_scan_durations <- type1_data$Duration
+
+# Estimate parameters for distributions
+lambda_hat <- mean(type1_daily_counts$DailyCount)  # Poisson parameter for daily counts
+mean_duration <- mean(type1_scan_durations)       # Mean for Normal distribution
+sd_duration <- sd(type1_scan_durations)           # SD for Normal distribution
+
+# Step 2: Simulate Type 1 Data Using Distributions
+set.seed(123)
+n_simulations <- 1000
+
+# Arrays to store simulated "true" statistics
+simulated_means <- numeric(n_simulations)
+simulated_sds <- numeric(n_simulations)
+simulated_medians <- numeric(n_simulations)
+simulated_daily_count_means <- numeric(n_simulations)
+simulated_daily_count_sds <- numeric(n_simulations)
+
+for (i in 1:n_simulations) {
+  # Simulate daily counts using Poisson distribution
+  sim_daily_counts <- rpois(n = nrow(type1_daily_counts), lambda = lambda_hat)
+  
+  # Simulate scan durations using Normal distribution
+  sim_scan_durations <- rnorm(n = length(type1_scan_durations), 
+                              mean = mean_duration, 
+                              sd = sd_duration)
+  
+  # Calculate statistics for simulated data
+  simulated_daily_count_means[i] <- mean(sim_daily_counts)
+  simulated_daily_count_sds[i] <- sd(sim_daily_counts)
+  simulated_means[i] <- mean(sim_scan_durations)
+  simulated_sds[i] <- sd(sim_scan_durations)
+  simulated_medians[i] <- median(sim_scan_durations)
+}
+
+# Calculate Monte Carlo standard errors
+mc_statistics_type1 <- data.frame(
+  Statistic = c(
+    "Mean Daily Count", "SD Daily Count",
+    "Mean Scan Duration", "SD Scan Duration", "Median Scan Duration"
+  ),
+  MonteCarlo_Value = c(
+    mean(simulated_daily_count_means),
+    mean(simulated_daily_count_sds),
+    mean(simulated_means),
+    mean(simulated_sds),
+    mean(simulated_medians)
+  ),
+  MonteCarlo_SE = c(
+    mc_se(simulated_daily_count_means),
+    mc_se(simulated_daily_count_sds),
+    mc_se(simulated_means),
+    mc_se(simulated_sds),
+    mc_se(simulated_medians)
+  )
+)
+
+# Print Monte Carlo results for Type 1
+print(mc_statistics_type1)
+
+# Optional: Visualize the results
+ggplot(mc_statistics_type1, aes(x = Statistic, y = MonteCarlo_Value)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_errorbar(aes(
+    ymin = MonteCarlo_Value - MonteCarlo_SE, 
+    ymax = MonteCarlo_Value + MonteCarlo_SE), 
+    width = 0.2, color = "blue"
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Monte Carlo Estimates for Type 1 Statistics",
+    y = "Values",
+    x = "Statistic"
+  )
+
+###---------------------------------------------------------------------------###
+# Monte Carlo Type 2
+# Filter Type 2 data
+type2_data <- data %>% filter(PatientType == "Type 2")
+
+# Step 1: Extract daily counts and scan durations
+type2_daily_counts <- type2_data %>%
+  group_by(Date) %>%
+  summarise(DailyCount = n())
+
+type2_scan_durations <- type2_data$Duration
+
+# Step 2: Simulate Type 2 Data Using Empirical Distribution
+set.seed(123)
+n_simulations <- 1000
+
+# Arrays to store simulated "true" statistics
+simulated_means <- numeric(n_simulations)
+simulated_sds <- numeric(n_simulations)
+simulated_medians <- numeric(n_simulations)
+simulated_daily_count_means <- numeric(n_simulations)
+simulated_daily_count_sds <- numeric(n_simulations)
+
+for (i in 1:n_simulations) {
+  # Simulate daily counts and scan durations
+  sim_daily_counts <- sample(type2_daily_counts$DailyCount, 
+                             size = nrow(type2_daily_counts), 
+                             replace = TRUE)
+  sim_scan_durations <- sample(type2_scan_durations, 
+                               size = length(type2_scan_durations), 
+                               replace = TRUE)
+  
+  # Calculate statistics for simulated data
+  simulated_daily_count_means[i] <- mean(sim_daily_counts)
+  simulated_daily_count_sds[i] <- sd(sim_daily_counts)
+  simulated_means[i] <- mean(sim_scan_durations)
+  simulated_sds[i] <- sd(sim_scan_durations)
+  simulated_medians[i] <- median(sim_scan_durations)
+}
+
+# Calculate Monte Carlo standard errors
+mc_se <- function(values) {
+  return(sd(values) / sqrt(length(values)))
+}
+
+mc_statistics <- data.frame(
+  Statistic = c(
+    "Mean Daily Count", "SD Daily Count",
+    "Mean Scan Duration", "SD Scan Duration", "Median Scan Duration"
+  ),
+  MonteCarlo_Value = c(
+    mean(simulated_daily_count_means),
+    mean(simulated_daily_count_sds),
+    mean(simulated_means),
+    mean(simulated_sds),
+    mean(simulated_medians)
+  ),
+  MonteCarlo_SE = c(
+    mc_se(simulated_daily_count_means),
+    mc_se(simulated_daily_count_sds),
+    mc_se(simulated_means),
+    mc_se(simulated_sds),
+    mc_se(simulated_medians)
+  )
+)
+
+# Print Monte Carlo results
+print(mc_statistics)
+
+# Optional: Plot Monte Carlo results
+ggplot(mc_statistics, aes(x = Statistic, y = MonteCarlo_Value)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  geom_errorbar(aes(ymin = MonteCarlo_Value - MonteCarlo_SE, ymax = MonteCarlo_Value + MonteCarlo_SE), 
+                width = 0.2) +
+  theme_minimal() +
+  labs(title = "Monte Carlo Estimates for Type 2 Statistics",
+       y = "Monte Carlo Value",
+       x = "Statistic")
+
 ###----------------------------------------------------------------------------###
 # Part 2: Scheduling
 # Load required libraries
